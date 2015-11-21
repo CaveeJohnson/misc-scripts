@@ -289,6 +289,8 @@ function waila:GatherInfo()
 				s.Title = ent.CustomTitle
 			
 			end
+			
+			s.SteamID = ent:SteamID()
 		
 		end
 		
@@ -300,6 +302,12 @@ function waila:GatherInfo()
 			
 			end
 		
+		end
+		
+		if ent.text then
+		
+			s.Text = ent.text
+			
 		end
 		
 		

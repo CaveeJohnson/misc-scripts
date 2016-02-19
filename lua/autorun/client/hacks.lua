@@ -69,9 +69,10 @@ local function getTitle()
 end
 
 local function done() return drawnMessages[1] == "FINISHED LOADING!" end
+local eyeRape = CreateConVar("mainframe_eyehack", 1, FCVAR_ARCHIVE, "Should we hack your eye mainframes?")
 
 local function draw()
-	if done() then
+	if done() and eyeRape:GetBool() then
 		local col = HSVToColor(math.random(359), math.Rand(0.8, 1), math.Rand(0.8, 1))
 			col.a = 20
 		surface.SetDrawColor(col)

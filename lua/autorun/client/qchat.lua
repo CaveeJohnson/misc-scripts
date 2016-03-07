@@ -7,36 +7,50 @@ qchat = {
 	Contact = "notq2f2@gmail.com",
 }
 
-local FontSize = CreateConVar("qchat_fontsize", "21")
+local HaxrCorp = CreateConVar("qchat_use_haxrcorp", "0", true)
+local FontSize = CreateConVar("qchat_fontsize", HaxrCorp:GetBool() and "17" or "21", true)
+local TransBack = CreateConVar("qchat_use_transback", "1", true)
 
 function qchat.CreateFonts()
 	surface.CreateFont("QChatFont", {
-		font = "HaxrCorp S8",
+		font = HaxrCorp:GetBool() and "HaxrCorp S8" or "Tahoma",
 		size = FontSize:GetInt(),
+		weight = HaxrCorp:GetBool() and 0 or 1000,
 		shadow = true,
 	})
 
 	surface.CreateFont("QChatFont2", {
-		font = "HaxrCorp S8",
-		size = 16,
+		font = HaxrCorp:GetBool() and "HaxrCorp S8" or "Tahoma",
+		size = HaxrCorp:GetBool() and 16 or 15,
+		weight = HaxrCorp:GetBool() and 0 or 500,
 		shadow = true,
 	})
 end
 
 qchat.CreateFonts()
 cvars.AddChangeCallback("qchat_fontsize", qchat.CreateFonts)
+cvars.AddChangeCallback("qchat_use_haxrcorp", qchat.CreateFonts)
 
-local deshou = {
-	white	= Color(204, 204, 202, 255),
-	alpha	= Color(  0,   0,   0,   0),
+local deshou
 
-	subGrey	= Color( 51,  51,  51, 255),
-	darkGrey	= Color( 45,  45,  45, 255),
-	highGrey	= Color( 78,  78,  78, 255),
+function qchat.CreateColors()
+	local a1 = TransBack:GetBool() and 195 or 255
+	local a2 = TransBack:GetBool() and 175 or 255
+	deshou = {
+		white	= Color(204, 204, 202, a1),
+		alpha	= Color(  0,   0,   0,   0),
 
-	pink	= Color(217, 191, 194, 255),
-	pink2	= Color(169, 141, 155, 255),
-}
+		subGrey	= Color( 51,  51,  51, a2),
+		darkGrey	= Color( 45,  45,  45, a1),
+		highGrey	= Color( 78,  78,  78, a2),
+
+		pink	= Color(217, 191, 194, a1),
+		pink2	= Color(169, 141, 155, a1),
+	}
+end
+
+qchat.CreateColors()
+cvars.AddChangeCallback("qchat_use_transback", qchat.CreateColors)
 
 function qchat:CreateChatTab()
 	-- The tab for the actual chat.

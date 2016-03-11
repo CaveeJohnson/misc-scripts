@@ -4,6 +4,8 @@ if minmod and IsValid(minmod.Panel) then
 	
 end
 
+-- minmod is a good but discontinued mod menu, if you are a 'leet haxor' then feel free to pull it apart to use as a menu base.
+
 local User 		= Material("deshou/Flag.png")
 local Friend 	= Material("deshou/Shock.png")
 local Self		= Material("deshou/Computer.png")
@@ -11,6 +13,9 @@ local Brick		= Material("deshou/Cube.png")
 local Link		= Material("deshou/Flip 3D.png")
 local Tick 		= Material("deshou/Check.png")
 local Cross 	= Material("deshou/Disabled.png")
+
+-- Requires these materials http://ravmunken.deviantart.com/art/Deshou-ICON-407411478 (put the png's in materials/deshou)
+-- Requires this font http://puu.sh/mo8X7/152f4b5d79.fon
 
 surface.CreateFont("minmod", {
 
@@ -938,7 +943,7 @@ function minmod:ESPDraw()
 		
 			if not self:IsTarget(ent, true) then
 			
-				if ent.HasBeenDrawn then self:ClearDraw() end
+				if ent.HasBeenDrawn then self:ClearDraw(ent) end
 			
 			continue end
 			

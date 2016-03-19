@@ -1055,6 +1055,15 @@ hook.Add("CreateMove", "\0minmod_bhop", function(cmd) minmod:BHop(cmd) end)
 
 minmod:SetVar("Enable Aimbot", false, "Arrow Up")
 
+local peacefullGun = {
+	["weapon_physcannon"] = true,
+	["weapon_physgun"] = true,
+	["hands"] = true,
+	["none"] = true,
+	["gmod_camera"] = true,
+	["gmod_tool"] = true,
+}
+
 local a=bit.band
 local n=bit.bnot
 local me=minmod.ply
@@ -1071,6 +1080,10 @@ function minmod:AimBot(cmd)
 
     else
 
+	local gun = ply:GetActiveWeapon()
+	if gun and IsValid(gun) and peacefullGun[ gun:GetClass() ] then return end
+	if not minmod.ply:Alive() then return end
+
 	if cmd:CommandNumber()==0 then
 		return
 	end
@@ -1084,13 +1097,26 @@ function minmod:AimBot(cmd)
 	local tg
 	local pl=player.GetAll()
 	local oc
+	local possible = {}
 	for _,at in next,pl do
         if self:IsFriend(at) then continue end
 		oc=at:LocalToWorld(at:OBBCenter())
 		if vl(at,ep,oc)then
-			tg=at
-			break
+			table.insert( possible, at )
 		end
+	end
+
+	if table.Count( possible ) > 0 then
+		table.sort( possible, function( a, b )
+			if a and b then
+				return a:GetPos():Distance(minmod.ply:GetPos()) < b:GetPos():Distance(minmod.ply:GetPos())
+			end
+		end )
+		tg = possible[1]
+	end
+
+	if tg and IsValid(tg) and tg:GetPos():Distance(minmod.ply:GetPos()) > 2000 and tg:GetEyeTrace().Entity and tg:GetEyeTrace().Entity ~= minmod.ply then
+		return
 	end
 
 	if tg then
@@ -1116,6 +1142,10 @@ function minmod:TriggerBot()
 
     else
 
+		local gun = ply:GetActiveWeapon()
+		if gun and IsValid(gun) and peacefullGun[ gun:GetClass() ] then return end
+		if not minmod.ply:Alive() then return end
+
         if UnAttack < CurTime() then
             minmod.ply:ConCommand( "-attack" )
             UnAttack = math.huge
@@ -1133,3 +1163,31 @@ function minmod:TriggerBot()
 
 end
 hook.Add("Think", "\0minmod_triggerbot", function() minmod:TriggerBot() end)
+
+minmod:SetVar( "Enable Autoreload", false, "Arrow Up")
+
+local UnReload = math.huge
+
+function minmod:AutoReload()
+
+	if not self:GetVar("Enable Autoreload") then
+
+	else
+
+		local gun = ply:GetActiveWeapon()
+		if gun and IsValid(gun) and peacefullGun[ gun:GetClass() ] then return end
+		if not minmod.ply:Alive() then return end
+
+		if gun.Clip1 and gun:Clip1() <= 0 then
+			minmod.ply:ConCommand( "+reload" )
+			UnReload = CurTime() + 0.1
+		end
+
+		if UnReload < CurTime() then
+			minmod.ply:ConCommand( "-reload" )
+			UnReload = math.huge
+		end
+
+	end
+end
+hook.Add("Think", "\0minmod_autoreload", function() minmod:AutoReload() end)

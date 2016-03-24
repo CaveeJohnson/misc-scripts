@@ -212,6 +212,8 @@ function waila:Identity(ent)
 end
 
 function waila:GatherInfo()
+	if not (self.player and IsValid(self.player)) then self.player = LocalPlayer() return end
+
 	local trace = util.TraceLine(util.GetPlayerTrace(self.player))
 
 	if not trace or not trace.Hit or not trace.Entity or not IsValid(trace.Entity) then

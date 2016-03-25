@@ -29,6 +29,7 @@ waila = {
 	textxo = 5 + 3,
 	textyo = 2 + 3,
 	bottom = true,
+	fade = 25,
 }
 
 function waila:DrawContainer()
@@ -268,15 +269,27 @@ function waila:GatherInfo()
 	return true
 end
 
+local alpha = 0
 function waila.Render()
 	local self = waila
 	local draw = self:GatherInfo()
 
+	if not self.info then return end
+
 	if not draw then
+		alpha = math.Clamp(alpha - self.fade, 0, 255)
+	else
+		alpha = math.Clamp(alpha + self.fade, 0, 255)
+	end
+
+	if alpha == 0 then
 		return
 	end
 
+	surface.SetAlphaMultiplier(alpha / 255)
 	self:DrawContainer()
+	surface.SetAlphaMultiplier(1)
+
 end
 
 hook.Add("HUDPaint", "waila_render", waila.Render)

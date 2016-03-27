@@ -223,10 +223,14 @@ if CLIENT then -- HUD
 	end
 	hook.Add("HUDShouldDraw", "hexbox_hidehudelements", hexbox.hideHUDElements)
 
-	local gm = gmod.GetGamemode() or GM or GAMEMODE or {}
-	function gm:HUDDrawTargetID()
+	function hexbox.noTarget()
+		local gm = gmod.GetGamemode() or GM or GAMEMODE or {}
+		function gm:HUDDrawTargetID()
 
+		end
 	end
+	hook.Add("InitPostEntity", "hexbox_notarget", hexbox.noTarget)
+	hexbox.noTarget()
 
 	local autoJump = CreateClientConVar("hexbox_autojump", "0", true)
 

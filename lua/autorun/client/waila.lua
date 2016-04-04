@@ -17,6 +17,8 @@ surface.CreateFont("waila_sub", {
 	size = 20,
 })
 
+local waila_enable = CreateClientConVar("waila_enable", "1", true, true)
+
 waila = {
 	concol = Color(10 , 0  , 22 , 240),
 	conedg = Color(90 , 0  , 190, 200),
@@ -271,6 +273,8 @@ end
 
 local alpha = 0
 function waila.Render()
+	if not waila_enable:GetBool() then return end
+
 	local self = waila
 	local draw = self:GatherInfo()
 
@@ -286,10 +290,11 @@ function waila.Render()
 		return
 	end
 
+	if hook.Run("HUDShouldDraw", "waila_container") == false then return end
+
 	surface.SetAlphaMultiplier(alpha / 255)
 	self:DrawContainer()
 	surface.SetAlphaMultiplier(1)
-
 end
 
 hook.Add("HUDPaint", "waila_render", waila.Render)

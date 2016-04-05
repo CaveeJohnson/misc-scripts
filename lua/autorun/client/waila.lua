@@ -1,3 +1,68 @@
+-- https://github.com/alexander-yakushev/awesompd/blob/master/utf8.lua
+
+function utf8.charbytes (s, i)
+   -- argument defaults
+   i = i or 1
+   local c = string.byte(s, i)
+
+   -- determine bytes needed for character, based on RFC 3629
+   if c > 0 and c <= 127 then
+      -- UTF8-1
+      return 1
+   elseif c >= 194 and c <= 223 then
+      -- UTF8-2
+      return 2
+   elseif c >= 224 and c <= 239 then
+      -- UTF8-3
+      return 3
+   elseif c >= 240 and c <= 244 then
+      -- UTF8-4
+      return 4
+   end
+end
+
+function utf8.sub (s, i, j)
+   j = j or -1
+
+   if i == nil then
+      return ""
+   end
+
+   local pos = 1
+   local bytes = string.len(s)
+   local len = 0
+
+   -- only set l if i or j is negative
+   local l = (i >= 0 and j >= 0) or utf8.len(s)
+   local startChar = (i >= 0) and i or l + i + 1
+   local endChar = (j >= 0) and j or l + j + 1
+
+   -- can't have start before end!
+   if startChar > endChar then
+      return ""
+   end
+
+   -- byte offsets to pass to string.sub
+   local startByte, endByte = 1, bytes
+
+   while pos <= bytes do
+      len = len + 1
+
+      if len == startChar then
+	 startByte = pos
+      end
+
+      pos = pos + utf8.charbytes(s, pos)
+
+      if len == endChar then
+	 endByte = pos - 1
+	 break
+      end
+   end
+
+   return string.sub(s, startByte, endByte)
+end
+
 surface.CreateFont("waila_title", {
 	font = "Minecraftia",
 	weight = 0,
@@ -23,6 +88,7 @@ waila = {
 	concol = Color(10 , 0  , 22 , 240),
 	conedg = Color(90 , 0  , 190, 200),
 	authco = Color(90 , 90 , 220, 255),
+	infoco = Color(220, 220, 220, 255),
 	subcol = Color(200, 200, 200, 255),
 	bordth = 3,
 	middle = ScrW() / 2,
@@ -34,6 +100,8 @@ waila = {
 	fade = 25,
 
 	toggles = {},
+
+	maxlen = 40,
 }
 
 function waila:CreateToggle(key)
@@ -119,6 +187,7 @@ function waila:PreDrawContents()
 
 			for k, v in next, self.info do
 				if not self.toggles[k]:GetBool() then continue end
+				local v = istable(v) and v[1] or v
 
 				local txt = k .. ": " .. tostring(v)
 				tw, th = surface.GetTextSize(txt)
@@ -171,8 +240,6 @@ function waila:DrawContents(x, y, w, h)
 
 	ttl = ttl + 1
 
-	surface.SetTextColor(color_white)
-
 	do
 		surface.SetFont("waila_sub")
 		surface.SetTextColor(self.subcol)
@@ -180,11 +247,25 @@ function waila:DrawContents(x, y, w, h)
 		for k, v in next, self.info do
 			if not self.toggles[k]:GetBool() then continue end
 
-			local txt = k .. ": " .. tostring(v)
-			tw, th = surface.GetTextSize(txt)
+			local col, text
+			if istable(v) then
+				col, text = v[2], v[1]
+			else
+				col, text = color_white, v
+			end
+
+			local kw, kh = surface.GetTextSize(k .. ": ")
+			tw, th = surface.GetTextSize(text)
+
+			surface.SetTextColor(self.infoco)
 
 			surface.SetTextPos(x + self.textxo, y + ttl)
-			surface.DrawText(txt)
+			surface.DrawText(k .. ": ")
+
+			surface.SetTextColor(col)
+
+			surface.SetTextPos(x + self.textxo + kw, y + ttl)
+			surface.DrawText(text)
 
 			ttl = ttl + th + 3
 		end
@@ -501,16 +582,21 @@ function waila:GatherInfo()
 				local title = ent:GetCustomTitle()
 
 				if title and title:Trim() ~= "" then
-					s.Title = title:Trim()
+					title = title:Trim()
+
+					local len = utf8.len(title)
+					s.Title = len < self.maxlen and title or utf8.sub(title:Trim(), 1, self.maxlen) .. "..."
 				end
 			end
 
 			s.SteamID = ent:SteamID()
 		end
 
-		if ent.CPPIGetOwner and ent:CPPIGetOwner() and IsValid(ent:CPPIGetOwner()) and ent:CPPIGetOwner():IsPlayer() then
-			if ent:CPPIGetOwner():Nick():Trim() ~= "" then
-				s.Owner = ent:CPPIGetOwner():Nick()
+		if ent.CPPIGetOwner then
+			local owner = ent:CPPIGetOwner()
+
+			if owner and owner:IsValid() and owner:IsPlayer() then
+				s.Owner = {self:Identity(ent:CPPIGetOwner())}
 			end
 		end
 

@@ -519,7 +519,7 @@ do
 			end
 		end
 
-		return nick, nickColor
+		return nick:Trim(), nickColor
 	end
 end
 

@@ -32,7 +32,13 @@ waila = {
 	textyo = 2 + 3,
 	bottom = true,
 	fade = 25,
+
+	toggles = {},
 }
+
+function waila:CreateToggle(key)
+	self.toggles[key] = CreateClientConVar("waila_line_" .. key:lower(), "1", true, true)
+end
 
 function waila:DrawContainer()
 	self:PreDrawContents()
@@ -112,6 +118,8 @@ function waila:PreDrawContents()
 			surface.SetFont("waila_sub")
 
 			for k, v in next, self.info do
+				if not self.toggles[k]:GetBool() then continue end
+
 				local txt = k .. ": " .. tostring(v)
 				tw, th = surface.GetTextSize(txt)
 
@@ -149,7 +157,7 @@ end
 
 function waila:DrawContents(x, y, w, h)
 	local tw, th, ttl = 0, 0, self.textyo
-	surface.SetTextColor(color_white)
+	surface.SetTextColor(self.titleColor)
 
 	do
 		surface.SetFont("waila_title")
@@ -163,11 +171,15 @@ function waila:DrawContents(x, y, w, h)
 
 	ttl = ttl + 1
 
+	surface.SetTextColor(color_white)
+
 	do
 		surface.SetFont("waila_sub")
 		surface.SetTextColor(self.subcol)
 
 		for k, v in next, self.info do
+			if not self.toggles[k]:GetBool() then continue end
+
 			local txt = k .. ": " .. tostring(v)
 			tw, th = surface.GetTextSize(txt)
 
@@ -191,10 +203,251 @@ function waila:DrawContents(x, y, w, h)
 	end
 end
 
+do
+	-- Pasted from nametags, modified to work for waila.
+	local PlayerColors = {
+		["0"]  = Color(0, 0, 0),
+		["1"]  = Color(128, 128, 128),
+		["2"]  = Color(192, 192, 192),
+		["3"]  = Color(255, 255, 255),
+		["4"]  = Color(0, 0, 128),
+		["5"]  = Color(0, 0, 255),
+		["6"]  = Color(0, 128, 128),
+		["7"]  = Color(0, 255, 255),
+		["8"]  = Color(0, 128, 0),
+		["9"]  = Color(0, 255, 0),
+		["10"] = Color(128, 128, 0),
+		["11"] = Color(255, 255, 0),
+		["12"] = Color(128, 0, 0),
+		["13"] = Color(255, 0, 0),
+		["14"] = Color(128, 0, 128),
+		["15"] = Color(255, 0, 255),
+	}
+	local tags = {
+		color = {
+			default = { 255, 255, 255, 255 },
+			callback = function(params)
+				return Color(params[1], params[2], params[3], params[4])
+			end,
+			params = { "number", "number", "number", "number" }
+		},
+		hsv = {
+			default = { 0, 1, 1 },
+			callback = function(params)
+				return HSVToColor(params[1] % 360, params[2], params[3])
+			end,
+			params = { "number", "number", "number" }
+		},
+	}
+	local types = {
+		["number"] = tonumber,
+		["bool"] = tobool,
+		["string"] = tostring,
+	}
+	local lib =
+	{
+		PI = math.pi,
+		pi = math.pi,
+		rand = math.random,
+		random = math.random,
+		randx = function(a,b)
+			a = a or -1
+			b = b or 1
+			return math.Rand(a, b)
+		end,
+
+		abs = math.abs,
+		sgn = function (x)
+			if x < 0 then return -1 end
+			if x > 0 then return  1 end
+			return 0
+		end,
+
+		pwm = function(offset, w)
+			w = w or 0.5
+			return offset % 1 > w and 1 or 0
+		end,
+
+		square = function(x)
+			x = math.sin(x)
+
+			if x < 0 then return -1 end
+			if x > 0 then return  1 end
+
+			return 0
+		end,
+
+		acos = math.acos,
+		asin = math.asin,
+		atan = math.atan,
+		atan2 = math.atan2,
+		ceil = math.ceil,
+		cos = math.cos,
+		cosh = math.cosh,
+		deg = math.deg,
+		exp = math.exp,
+		floor = math.floor,
+		frexp = math.frexp,
+		ldexp = math.ldexp,
+		log = math.log,
+		log10 = math.log10,
+		max = math.max,
+		min = math.min,
+		rad = math.rad,
+		sin = math.sin,
+		sinc = function (x)
+			if x == 0 then return 1 end
+			return math.sin(x) / x
+		end,
+		sinh = math.sinh,
+		sqrt = math.sqrt,
+		tanh = math.tanh,
+		tan = math.tan,
+
+		clamp = math.Clamp,
+		pow = math.pow,
+
+		t = RealTime,
+		time = RealTime,
+	}
+	local blacklist = { "repeat", "until", "function", "end" }
+
+	function waila.NametagsTagParser(ply)
+		local nick = ply:Nick()
+		local nickColor = team.GetColor(ply:Team())
+
+		if nick:match("<(.-)=(.-)>") or nick:match("(^%d+)") then
+			local nickTags = {}
+			local inCOD = false
+			local CODchars = ""
+
+			local nickChars = ply:Nick():Split("")
+			local inMarkup = false
+			local markupTag = ""
+			local markupParams = {}
+			local markupParam = ""
+			local lookingForParams = false
+
+			for i, char in next, nickChars do
+
+				-- COD colors
+
+				if not inMarkup and nick:match("(^%d+)") then
+					if char == "^" then
+						inCOD = true
+						continue
+					end
+
+					if inCOD then
+						if type(tonumber(char)) == "number" then
+							CODchars = CODchars .. char
+							continue
+						elseif type(tonumber(char)) ~= "number" then
+							local color = PlayerColors[CODchars]
+							CODchars = ""
+							if not color then inCOD = false continue end
+							local colParams = {}
+							colParams[1] = tostring(color.r)
+							colParams[2] = tostring(color.g)
+							colParams[3] = tostring(color.b)
+							table.insert(nickTags, { tagName = "color", params = colParams })
+							inCOD = false
+							continue
+						end
+					end
+				end
+
+				-- markup
+
+				if not inCOD and nick:match("<(.-)=(.-)>")then
+					if char == "<" and not inMarkup then
+						inMarkup = true
+						continue
+					elseif char == "=" and inMarkup and not lookingForParams then
+						lookingForParams = true
+						continue
+					elseif char == ">" and inMarkup then
+						table.insert(markupParams, markupParam)
+						for k, param in pairs(markupParams) do
+							markupParams[k] = param:Trim()
+							param = markupParams[k]
+							if param:sub(1, 1) == "[" and param:sub(-1, -1) == "]" then
+								local exp = param:sub(2, -2)
+								if not exp then continue end
+								local ok = true
+								for _, word in next, blacklist do
+									if param:lower():match(word) then ok = false break end
+								end
+								if ok then
+									local func = CompileString("return " .. exp, "nametags_exp", false)
+									if type(func) == "function" then
+										setfenv(func, lib)
+										markupParams[k] = tostring(func())
+									end
+								end
+							end
+						end
+						table.insert(nickTags, { tagName = markupTag, params = markupParams })
+						inMarkup = false
+						lookingForParams = false
+						markupTag = ""
+						markupParams = {}
+						markupParam = ""
+						continue
+					end
+
+					if inMarkup then
+						if not lookingForParams then
+							markupTag = markupTag .. char
+							continue
+						elseif lookingForParams and char == "," and not escaping then
+							table.insert(markupParams, markupParam)
+							markupParam = ""
+							continue
+						elseif lookingForParams and char == "\\" and not escaping then
+							escaping = true
+							continue
+						else
+							markupParam = markupParam .. char
+							escaping = false
+							continue
+						end
+					end
+				end
+			end
+
+			nick = nick:gsub("<(.-)=(.-)>", "")
+			nick = nick:gsub("(^%d+)", "")
+
+			if #nickTags >= 1 then
+				for i, tag in next, nickTags do -- for every tag in our name
+					local nickTag, nickParams = tag.tagName, tag.params
+					for tagName, tagData in next, tags do -- check the list of available tags
+						if nickTag == tagName then -- if the tag matches then
+							for k, Type in next, tagData.params do
+								local param = nickParams[k]
+								if param == nil or param == "" or type(types[Type](param)) ~= Type then
+									nickParams[k] = tagData.default[k]
+								end
+							end
+							nickColor = tagData.callback(nickParams)
+							break
+						end
+					end
+				end
+			end
+		end
+
+		return nick, nickColor
+	end
+end
+
 function waila:Identity(ent)
 	local name
 
-	if ent:IsPlayer() then return ent:Nick() end
+	if ent:IsPlayer() then
+		return self.NametagsTagParser(ent)
+	end
 
 	name = language.GetPhrase(
 		(ent.Name and ent.Name:Trim() ~= "" and ent.Name) or
@@ -211,7 +464,7 @@ function waila:Identity(ent)
 	end
 
 	name = name .. " " .. ent:EntIndex()
-	return name
+	return name, color_white
 end
 
 function waila:GatherInfo()
@@ -225,9 +478,18 @@ function waila:GatherInfo()
 
 	local ent = trace.Entity
 
-	self.title = self:Identity(ent)
+	self.title, self.titleColor = self:Identity(ent)
 	self.info = {}
 		local s = self.info
+
+		if ent.Health then
+			local hp = ent:Health()
+
+			if hp > 0 and hp == hp and hp ~= math.huge then
+				s.Health = math.floor(hp)
+			end
+		end
+
 		s.Model = ent:GetModel()
 
 		if ent:GetMaterial() and ent:GetMaterial():Trim() ~= "" then
@@ -235,9 +497,14 @@ function waila:GatherInfo()
 		end
 
 		if ent:IsPlayer() then
-			if ent.CustomTitle and ent.CustomTitle:Trim() ~= "" then
-				s.Title = ent.CustomTitle
+			if ent.GetCustomTitle then
+				local title = ent:GetCustomTitle()
+
+				if title and title:Trim() ~= "" then
+					s.Title = title:Trim()
+				end
 			end
+
 			s.SteamID = ent:SteamID()
 		end
 
@@ -271,6 +538,16 @@ function waila:GatherInfo()
 	return true
 end
 
+waila:CreateToggle("Title")
+waila:CreateToggle("SteamID")
+waila:CreateToggle("Text")
+waila:CreateToggle("Health")
+waila:CreateToggle("Model")
+waila:CreateToggle("Material")
+waila:CreateToggle("Owner")
+waila:CreateToggle("Purpose")
+waila:CreateToggle("Contact")
+
 local alpha = 0
 function waila.Render()
 	if not waila_enable:GetBool() then return end
@@ -293,8 +570,11 @@ function waila.Render()
 	if hook.Run("HUDShouldDraw", "waila_container") == false then return end
 
 	surface.SetAlphaMultiplier(alpha / 255)
-	self:DrawContainer()
+		self:DrawContainer()
 	surface.SetAlphaMultiplier(1)
 end
 
 hook.Add("HUDPaint", "waila_render", waila.Render)
+
+local function False() return false end
+hook.Add("HUDDrawTargetID", "waila_targetid", False)

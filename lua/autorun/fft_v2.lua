@@ -34,10 +34,10 @@ hook.Add( "PlayerInitialSpawn", "fft_v2", function( ply )
     for _, ent in pairs( ents.FindByClass( "fft_v2" ) ) do
         ent:RequestTime()
 
-        timer.Simple( 2, function() 
+        timer.Simple( 2, function()
             net.Start( "fft_v2" )
                 net.WriteString()
-                net.WriteInt( tonumber( ent.Time ) or 0 )
+                net.WriteInt( tonumber( ent.Time ) or 0, 32 )
             net.Send( ply )
         end )
     end
@@ -126,7 +126,7 @@ net.Receive( "fft_v2", function( len )
     local url = net.ReadString()
     if not url or url == "" then print( "[TrixMusic] FFT Url is not valid") return end
 
-    local time = net.ReadInt() or 0
+    local time = net.ReadInt( 32 ) or 0
 
     ent:Play( url, time )
 end )
@@ -203,7 +203,7 @@ function ENT:Play( name )
         net.Start( "fft_v2" )
             net.WriteEntity( self )
             net.WriteString( self.Songs[self.OnGoing] )
-            net.WriteInt( self.Time or 0 )
+            net.WriteInt( self.Time or 0, 32 )
         net.Broadcast()
     end, function()
         print( "[TrixMusic] Fetch failed" )

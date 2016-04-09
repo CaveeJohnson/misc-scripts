@@ -9,6 +9,8 @@ local autoSpawn = {
 			callback = function(ent)
 				ent:CPPISetOwner(game.GetWorld())
 				ent:Play("monstercat")
+
+				_G.map_fft = ent
 			end,
 		},
 
@@ -20,6 +22,8 @@ local autoSpawn = {
 			callback = function(ent)
 				ent:SetModel("models/dav0r/camera.mdl")
 				ent:CPPISetOwner(game.GetWorld())
+
+				_G.map_playx = ent
 			end,
 		}
 	}

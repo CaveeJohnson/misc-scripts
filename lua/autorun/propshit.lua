@@ -1,3 +1,51 @@
+if SERVER then
+local autoSpawn = {
+	gm_bluehills_test3 = {
+		-- FFT Player
+		[1] = {
+			pos = Vector(-1477.0, 566.0, 470.0),
+			angles = Angle(0.0, -180.0, 0.0),
+			class = "fft_v2",
+			callback = function(ent)
+				ent:CPPISetOwner(game.GetWorld())
+				ent:Play("monstercat")
+			end,
+		},
+
+		-- Main PlayX
+		[2] = {
+			pos = Vector(770.0, 509.0, 305.0),
+			angles = Angle(4.0, 90.0, 0.0),
+			class = "gmod_playx",
+			callback = function(ent)
+				ent:SetModel("models/dav0r/camera.mdl")
+				ent:CPPISetOwner(game.GetWorld())
+			end,
+		}
+	}
+}
+
+local function propshit_autospawn()
+	for k, v in ipairs(autoSpawn[game.GetMap()] or {}) do
+		local e = ents.Create(v.class)
+			e:SetPos(v.pos)
+			e:SetAngles(v.angles)
+		e:Spawn()
+		e:Activate()
+
+		e._propshit = true
+		v.callback(e)
+	end
+end
+
+hook.Add("InitPostEntity", "propshit_autospawn", propshit_autospawn)
+concommand.Add("propshit_respawn_ents", function(p)
+		if IsValid(p) and not p:IsAdmin() then return end
+		for k, v in ipairs(ents.GetAll()) do if v._propshit then v:Remove() end end
+		propshit_autospawn()
+end)
+end
+
 local modelBlacklist = {
 	["models/props_vehicles/tanker001a.mdl"] = true,
 	["models/props_vehicles/apc001.mdl"] = true,

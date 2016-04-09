@@ -36,7 +36,7 @@ hook.Add( "PlayerInitialSpawn", "fft_v2", function( ply )
 
         timer.Simple( 2, function()
             net.Start( "fft_v2" )
-                net.WriteString()
+                net.WriteString( ent.Songs[ ent.OnGoing ] )
                 net.WriteInt( tonumber( ent.Time ) or 0, 32 )
             net.Send( ply )
         end )

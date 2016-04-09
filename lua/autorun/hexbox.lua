@@ -126,6 +126,12 @@ function hexbox.centerHack()
 end
 if SERVER then hook.Add("Think", "hexbox_centerhack", hexbox.centerHack) end
 
+local function eight()
+	print("The HexaHedron '8' Server was lots in a hard-drive failure ages ago, you are currently on 'hexbox', it's successor.")
+end
+concommand.Add("eight", eight)
+concommand.Add("8", eight)
+
 color_red = Color(255, 0, 0, 255)
 color_green = Color(0, 255, 0, 255)
 color_blue = Color(0, 0, 255, 255)

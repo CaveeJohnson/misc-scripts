@@ -291,7 +291,7 @@ function ENT:Play( url, time )
 end
 
 function ENT:Think()
-    if not self.EM then
+    if not self.EM or not IsValid( self.EM ) then
         self.EM = ParticleEmitter( Vector( 0, 0, 0 ) )
     end
 

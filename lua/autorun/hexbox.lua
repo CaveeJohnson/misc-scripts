@@ -43,7 +43,8 @@ end
 
 hexbox.extraWeps = {
 	"none",
-	"torch"
+	"weapon_crowbar",
+	--"torch"
 }
 hexbox.nuke = {
 	["weapon_357"] = true,
@@ -59,6 +60,7 @@ hexbox.nuke = {
 	["weapon_stunstick"] = true,
 	["manhack_welder"] = true,
 	["weapon_medkit"] = true,
+	["weapon_flechettegun"] = true,
 }
 hexbox.nuke_ent = {
 	["item_ammo_ar2"] = true,
@@ -88,6 +90,7 @@ hexbox.nuke_ent = {
 
 function hexbox.loadout(ply)
 	for k, v in ipairs(hexbox.extraWeps) do ply:Give(v) end
+	timer.Simple(0, function() ply:SelectWeapon("none") end)
 end
 if SERVER then hook.Add("PlayerLoadout", "hexbox_loadout", hexbox.loadout) end
 
@@ -136,57 +139,60 @@ if CLIENT then -- HUD
 	}
 
 	local centers = CreateClientConVar("hexbox_centers", "0", true)
+	local hud = CreateClientConVar("hexbox_hud", "1", true)
 
 	function hexbox.hud()
-		local ply = LocalPlayer()
-		local x, y = 5, ScrH() - 5
-		local str, tW, tH
+		if hud:GetBool() then
+			local ply = LocalPlayer()
+			local x, y = 5, ScrH() - 5
+			local str, tW, tH
 
-		local name = ply:Nick():lower():Trim():gsub(" ", "_") .. "_pc"
+			local name = ply:Nick():lower():Trim():gsub(" ", "_") .. "_pc"
 
-		local maxvelo = 3000
-		local segments = #name + 13
-		local prepend = math.floor(math.log10(maxvelo))
+			local maxvelo = 3000
+			local segments = #name + 13
+			local prepend = math.floor(math.log10(maxvelo))
 
-		local time = ply:GetPlayTimeTable()
-		time = (time.h < 10 and "0" .. time.h or time.h) .. ":" .. (time.m < 10 and "0" .. time.m or time.m) .. " h"
+			local time = ply:GetPlayTimeTable()
+			time = (time.h < 10 and "0" .. time.h or time.h) .. ":" .. (time.m < 10 and "0" .. time.m or time.m) .. " h"
 
-		local velo = math.floor(ply:GetAbsVelocity():Length())
-		str = math.min(velo, maxvelo)
+			local velo = math.floor(ply:GetAbsVelocity():Length())
+			str = math.min(velo, maxvelo)
 
-		local actualprepend = prepend - math.floor(math.log10(velo))
+			local actualprepend = prepend - math.floor(math.log10(velo))
 
-		local used = math.floor(str / maxvelo * segments)
-		local left = segments - used
+			local used = math.floor(str / maxvelo * segments)
+			local left = segments - used
 
-		str = ("#"):rep(used)
-		str = time .. "    [" .. str .. ("-"):rep(left) .. "] " .. (velo ~= 0 and ("0"):rep(actualprepend) .. velo or ("0"):rep(prepend) .. "0") .. " u/s"
+			str = ("#"):rep(used)
+			str = time .. "    [" .. str .. ("-"):rep(left) .. "] " .. (velo ~= 0 and ("0"):rep(actualprepend) .. velo or ("0"):rep(prepend) .. "0") .. " u/s"
 
-		surface.SetFont("hexbox_console")
-		tW, tH = surface.GetTextSize(str)
+			surface.SetFont("hexbox_console")
+			tW, tH = surface.GetTextSize(str)
 
-		y = y - tH - 2
+			y = y - tH - 2
 
-		surface.SetDrawColor(color_black)
-		surface.DrawRect(x, y - 1, tW + 6, tH + 2)
+			surface.SetDrawColor(color_black)
+			surface.DrawRect(x, y - 1, tW + 6, tH + 2)
 
-		surface.SetTextColor(color_white)--Color(50, 255, 100, 255))
-		surface.SetTextPos(x + 3, y - 1)
-		surface.DrawText(str)
+			surface.SetTextColor(color_white)--Color(50, 255, 100, 255))
+			surface.SetTextPos(x + 3, y - 1)
+			surface.DrawText(str)
 
-		y = y - tH - 2
+			y = y - tH - 2
 
-		str = "[root@" .. name .. " hexbox]$ gmod_track_stats.sh"
+			str = "[root@" .. name .. " hexbox]$ gmod_track_stats.sh"
 
-		surface.SetFont("hexbox_console")
-		tW, tH = surface.GetTextSize(str)
+			surface.SetFont("hexbox_console")
+			tW, tH = surface.GetTextSize(str)
 
-		surface.SetDrawColor(color_black)
-		surface.DrawRect(x, y - 1, tW + 6, tH + 2)
+			surface.SetDrawColor(color_black)
+			surface.DrawRect(x, y - 1, tW + 6, tH + 2)
 
-		surface.SetTextColor(color_white)
-		surface.SetTextPos(x + 3, y)
-		surface.DrawText(str)
+			surface.SetTextColor(color_white)
+			surface.SetTextPos(x + 3, y)
+			surface.DrawText(str)
+		end
 
 		if centers:GetBool() then
 			for k, v in ipairs(ents.FindByClass("prop_*")) do

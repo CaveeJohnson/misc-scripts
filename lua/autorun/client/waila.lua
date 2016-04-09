@@ -97,7 +97,7 @@ waila = {
 	textxo = 5 + 3,
 	textyo = 2 + 3,
 	bottom = true,
-	fade = 25,
+	fade = 15,
 
 	toggles = {},
 

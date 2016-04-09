@@ -7,7 +7,7 @@ util.AddNetworkString( "fft_v2_request" )
 net.Receive( "fft_v2", function( len, ply )
     local ent = net.ReadEntity()
     if not ent or not IsValid( ent ) then print( "[TrixMusic] Song ended, invalid entity?" ) return end
-    --print( "[TrixMusic] " .. ply:Name() .. " says song ended" )
+    print( "[TrixMusic] " .. ply:Name() .. " says song ended" )
 
     table.insert( ent.ThinkEnd, ply:SteamID() )
     ent:TryNextSong()
@@ -16,7 +16,7 @@ end )
 net.Receive( "fft_v2_valid", function( len, ply )
     local ent = net.ReadEntity()
     if not ent or not IsValid( ent ) then print( "[TrixMusic] Validate listener, invalid entity?" ) return end
-    --print( "[TrixMusic] " .. ply:Name() .. " listens to music" )
+    print( "[TrixMusic] " .. ply:Name() .. " listens to music" )
 
     ent.Listeners[ ply:SteamID() ] = true
 end )
@@ -25,7 +25,7 @@ net.Receive( "fft_v2_request", function( len, ply )
     local ent = net.ReadEntity()
     if not ent or not IsValid( ent ) then print( "[TrixMusic] Request time, invalid entity?" ) return end
 
-    local time = net.ReadString()
+    local time = net.ReadInt( 32 )
 
     ent.Time = time + 2
 end )
@@ -34,10 +34,11 @@ hook.Add( "PlayerInitialSpawn", "fft_v2", function( ply )
     for _, ent in pairs( ents.FindByClass( "fft_v2" ) ) do
         ent:RequestTime()
 
-        timer.Simple( 2, function() 
+        timer.Simple( 2, function()
             net.Start( "fft_v2" )
-                net.WriteString()
-                net.WriteInt( tonumber( ent.Time ) or 0 )
+                net.WriteEntity( ent )
+                net.WriteString( ent.Songs[ ent.OnGoing ] )
+                net.WriteInt( tonumber( ent.Time ) or 0, 32 )
             net.Send( ply )
         end )
     end
@@ -105,7 +106,7 @@ hook.Add( "PostDrawOpaqueRenderables", "fft_v2", function()
             draw.DrawText( timestr .. "/" .. durstr, "fft_v2", 0, 0, Color( 255, 255, 255 ), TEXT_ALIGN_CENTER )
         cam.End3D2D()
 
-        if dur > 1 and time == dur and not ent.Ended then
+        if dur > 10 and time > 10 and timestr == durstr and not ent.Ended then
             ent.Ended = true
 
             net.Start( "fft_v2" )
@@ -126,7 +127,7 @@ net.Receive( "fft_v2", function( len )
     local url = net.ReadString()
     if not url or url == "" then print( "[TrixMusic] FFT Url is not valid") return end
 
-    local time = net.ReadInt() or 0
+    local time = net.ReadInt( 32 ) or 0
 
     ent:Play( url, time )
 end )
@@ -137,7 +138,7 @@ net.Receive( "fft_v2_request", function( len )
 
     net.Start( "fft_v2_request" )
         net.WriteEntity( ent )
-        net.WriteString( tostring( ent.Sound:GetTime() ) )
+        net.WriteInt( ent.Sound and IsValid( ent.Sound ) and ent.Sound:GetTime() or 0, 32 )
     net.SendToServer()
 end )
 
@@ -203,7 +204,7 @@ function ENT:Play( name )
         net.Start( "fft_v2" )
             net.WriteEntity( self )
             net.WriteString( self.Songs[self.OnGoing] )
-            net.WriteInt( self.Time or 0 )
+            net.WriteInt( self.Time or 0, 32 )
         net.Broadcast()
     end, function()
         print( "[TrixMusic] Fetch failed" )
@@ -269,6 +270,7 @@ function ENT:Play( url, time )
     songname = string.sub( songname, 1, string.len( songname ) - 4 )
 
     self.SongName = songname
+    self.Time = time or 0
 
     sound.PlayURL( url, "noblock", function( s )
         if IsValid( s ) then
@@ -291,7 +293,7 @@ function ENT:Play( url, time )
 end
 
 function ENT:Think()
-    if not self.EM then
+    if not self.EM or not IsValid( self.EM ) then
         self.EM = ParticleEmitter( Vector( 0, 0, 0 ) )
     end
 

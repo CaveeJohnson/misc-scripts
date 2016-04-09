@@ -2,11 +2,12 @@ if SERVER then
 
 util.AddNetworkString( "fft_v2" )
 util.AddNetworkString( "fft_v2_valid" )
+util.AddNetworkString( "fft_v2_request" )
 
 net.Receive( "fft_v2", function( len, ply )
     local ent = net.ReadEntity()
     if not ent or not IsValid( ent ) then print( "[TrixMusic] Song ended, invalid entity?" ) return end
-    print( "[TrixMusic] " .. ply:Name() .. " says song ended" )
+    --print( "[TrixMusic] " .. ply:Name() .. " says song ended" )
 
     table.insert( ent.ThinkEnd, ply:SteamID() )
     ent:TryNextSong()
@@ -15,12 +16,108 @@ end )
 net.Receive( "fft_v2_valid", function( len, ply )
     local ent = net.ReadEntity()
     if not ent or not IsValid( ent ) then print( "[TrixMusic] Validate listener, invalid entity?" ) return end
-    print( "[TrixMusic] " .. ply:Name() .. " listens to music" )
+    --print( "[TrixMusic] " .. ply:Name() .. " listens to music" )
 
     ent.Listeners[ ply:SteamID() ] = true
 end )
 
+net.Receive( "fft_v2_request", function( len, ply )
+    local ent = net.ReadEntity()
+    if not ent or not IsValid( ent ) then print( "[TrixMusic] Request time, invalid entity?" ) return end
+
+    local time = net.ReadString()
+
+    ent.Time = time + 2
+end )
+
+hook.Add( "PlayerInitialSpawn", "fft_v2", function( ply )
+    for _, ent in pairs( ents.FindByClass( "fft_v2" ) ) do
+        ent:RequestTime()
+
+        timer.Simple( 2, function() 
+            net.Start( "fft_v2" )
+                net.WriteString()
+                net.WriteInt( tonumber( ent.Time ) or 0 )
+            net.Send( ply )
+        end )
+    end
+end )
+
 else
+
+surface.CreateFont("fft_v2", {
+    font = "Roboto",
+    size = 100,
+    weight = 800,
+})
+
+hook.Add( "PostDrawOpaqueRenderables", "fft_v2", function()
+
+    for _, ent in pairs( ents.FindByClass( "fft_v2" ) ) do
+
+        if not IsValid( ent ) then continue end
+
+        local pos = ent:GetPos() + ent:GetRight() * 10 * (25 / 2) + ent:GetUp() * 100
+        local ang = ent:GetAngles()
+        ang:RotateAroundAxis( ang:Right(), 90 )
+        ang:RotateAroundAxis( ang:Up(), -90 )
+
+        local songname = ent.SongName or ""
+
+        local dur = ent.Sound and IsValid( ent.Sound ) and ent.Sound:GetLength() or "0"
+        dur = tonumber( dur )
+
+        local h = math.floor( dur / 60 / 60 )
+        if math.abs( h ) < 1 then
+            h = ""
+        else
+            h = h .. ":"
+        end
+
+        local m = math.floor( dur / 60 ) % 60
+        if math.abs( m ) < 10 then m = "0" .. m end
+
+        local s = math.floor( dur ) % 60
+        if math.abs( s ) < 10 then s = "0" .. s end
+
+        local durstr = h .. m .. ":" .. s
+
+        local time = ent.Sound and IsValid( ent.Sound ) and ent.Sound:GetTime() or "0"
+        time = tonumber( time )
+
+        local h = math.floor( time / 60 / 60 )
+        if math.abs( h ) < 1 then
+            h = ""
+        else
+            h = h .. ":"
+        end
+
+        local m = math.floor( time / 60 ) % 60
+        if math.abs( m ) < 10 then m = "0" .. m end
+
+        local s = math.floor( time ) % 60
+        if math.abs( s ) < 10 then s = "0" .. s end
+
+        local timestr = h .. m .. ":" .. s
+
+        cam.Start3D2D( pos, ang, 0.1 )
+            draw.DrawText( songname, "fft_v2", 0, -100, Color( 255, 255, 255 ), TEXT_ALIGN_CENTER )
+            draw.DrawText( timestr .. "/" .. durstr, "fft_v2", 0, 0, Color( 255, 255, 255 ), TEXT_ALIGN_CENTER )
+        cam.End3D2D()
+
+        if dur > 1 and time == dur and not ent.Ended then
+            ent.Ended = true
+
+            net.Start( "fft_v2" )
+                net.WriteEntity( ent )
+            net.SendToServer()
+
+            print( "[TrixMusic] Song ended" )
+        end
+
+    end
+
+end )
 
 net.Receive( "fft_v2", function( len )
     local ent = net.ReadEntity()
@@ -29,7 +126,19 @@ net.Receive( "fft_v2", function( len )
     local url = net.ReadString()
     if not url or url == "" then print( "[TrixMusic] FFT Url is not valid") return end
 
-    ent:Play( url )
+    local time = net.ReadInt() or 0
+
+    ent:Play( url, time )
+end )
+
+net.Receive( "fft_v2_request", function( len )
+    local ent = net.ReadEntity()
+    if not ent or not IsValid( ent ) then print( "[TrixMusic] FFT Ent is not valid") return end
+
+    net.Start( "fft_v2_request" )
+        net.WriteEntity( ent )
+        net.WriteString( tostring( ent.Sound:GetTime() ) )
+    net.SendToServer()
 end )
 
 end
@@ -39,7 +148,7 @@ easylua.StartEntity( "fft_v2" )
 ENT.Base = "base_gmodentity"
 ENT.Type = "anim"
 
-ENT.PrintName = "FFT Ent"
+ENT.PrintName = "FFT Player"
 ENT.Model = "models/hunter/blocks/cube025x025x025.mdl"
 
 if SERVER then
@@ -80,6 +189,7 @@ function ENT:Play( name )
 
     self.Listeners = {}
     self.ThinkEnd = {}
+    self.Time = 0
 
     local url = self.URL[ id ]
 
@@ -93,6 +203,7 @@ function ENT:Play( name )
         net.Start( "fft_v2" )
             net.WriteEntity( self )
             net.WriteString( self.Songs[self.OnGoing] )
+            net.WriteInt( self.Time or 0 )
         net.Broadcast()
     end, function()
         print( "[TrixMusic] Fetch failed" )
@@ -127,6 +238,12 @@ function ENT:TryNextSong()
     end
 end
 
+function ENT:RequestTime()
+    net.Start( "fft_v2_request" )
+        net.WriteEntity( self )
+    net.Broadcast()
+end
+
 else
 
 ENT.AMP = 100
@@ -144,8 +261,8 @@ function ENT:Initialize()
     end
 end
 
-function ENT:Play( url )
-    if self.Sound then self.Sound:Stop() end
+function ENT:Play( url, time )
+    if self.Sound and IsValid( self.Sound ) and self.Sound:GetTime() > 0 then self.Sound:Stop() end
 
     local songname = string.Explode( "/", url )
     songname = songname[#songname]
@@ -157,6 +274,7 @@ function ENT:Play( url )
         if IsValid( s ) then
             s:SetPos( self:GetPos() + self:GetRight() * 10 * (25 / 2) )
             s:Play()
+            s:SetTime( time or 0 )
             self.Sound = s
         else
             LocalPlayer():ChatPrint( "FFT_Ent - Failed (Wrong url?)" )
@@ -287,81 +405,3 @@ end
 end
 
 easylua.EndEntity( false, true )
-
-if CLIENT then
-
-surface.CreateFont("fft_v2", {
-    font = "Roboto",
-    size = 100,
-    weight = 800,
-})
-
-hook.Add( "PostDrawOpaqueRenderables", "fft_v2", function()
-
-    for _, ent in pairs( ents.FindByClass( "fft_v2" ) ) do
-
-        if not IsValid( ent ) then continue end
-
-        local pos = ent:GetPos() + ent:GetRight() * 10 * (25 / 2) + ent:GetUp() * 100
-        local ang = ent:GetAngles()
-        ang:RotateAroundAxis( ang:Right(), 90 )
-        ang:RotateAroundAxis( ang:Up(), -90 )
-
-        local songname = ent.SongName or ""
-
-        local dur = ent.Sound and IsValid( ent.Sound ) and ent.Sound:GetLength() or "0"
-        dur = tonumber( dur )
-
-        local h = math.floor( dur / 60 / 60 )
-        if math.abs( h ) < 1 then
-            h = ""
-        else
-            h = h .. ":"
-        end
-
-        local m = math.floor( dur / 60 ) % 60
-        if math.abs( m ) < 10 then m = "0" .. m end
-
-        local s = math.floor( dur ) % 60
-        if math.abs( s ) < 10 then s = "0" .. s end
-
-        local durstr = h .. m .. ":" .. s
-
-        local time = ent.Sound and IsValid( ent.Sound ) and ent.Sound:GetTime() or "0"
-        time = tonumber( time )
-
-        local h = math.floor( time / 60 / 60 )
-        if math.abs( h ) < 1 then
-            h = ""
-        else
-            h = h .. ":"
-        end
-
-        local m = math.floor( time / 60 ) % 60
-        if math.abs( m ) < 10 then m = "0" .. m end
-
-        local s = math.floor( time ) % 60
-        if math.abs( s ) < 10 then s = "0" .. s end
-
-        local timestr = h .. m .. ":" .. s
-
-        cam.Start3D2D( pos, ang, 0.1 )
-            draw.DrawText( songname, "fft_v2", 0, -100, Color( 255, 255, 255 ), TEXT_ALIGN_CENTER )
-            draw.DrawText( timestr .. "/" .. durstr, "fft_v2", 0, 0, Color( 255, 255, 255 ), TEXT_ALIGN_CENTER )
-        cam.End3D2D()
-
-        if dur > 1 and time == dur and not ent.Ended then
-            ent.Ended = true
-
-            net.Start( "fft_v2" )
-                net.WriteEntity( ent )
-            net.SendToServer()
-
-            print( "[TrixMusic] Song ended" )
-        end
-
-    end
-
-end )
-
-end

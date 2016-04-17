@@ -519,6 +519,8 @@ do
 			end
 		end
 
+		nickColor = Color(nickColor.r, nickColor.g, nickColor.b, 255)
+
 		return nick:Trim(), nickColor
 	end
 end

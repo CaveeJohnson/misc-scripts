@@ -7,6 +7,13 @@ qchat = {
 	Contact = "notq2f2@gmail.com",
 }
 
+qchat.shortcut = {
+	[".lenny"] = [[( ͡° ͜ʖ ͡°)]],
+	[".iunno"] = [[¯\_(ツ)_/¯]],
+	[".flip"] = [[(╯°□°）╯︵ ┻━┻]],
+	[".unflip"] = [[┬─┬﻿ ノ( ゜-゜ノ)]],
+}
+
 local Legacy			= CreateClientConVar("qchat_legacymode", "0", true)
 local HaxrCorp		= CreateClientConVar("qchat_use_haxrcorp", "0", true)
 local FontSize		= CreateClientConVar("qchat_fontsize", HaxrCorp:GetBool() and "21" or "17", true)
@@ -141,12 +148,16 @@ function qchat:CreateChatTab()
 
 		if key == KEY_TAB then
 			local tab = hook.Run("OnChatTab", txt)
+			local split = txt:Split(" ")
 
-			if tab and isstring(tab) then
+			if tab and isstring(tab) and tab ~= txt then
 				pan:SetText(tab)
+			elseif qchat.shortcut[split[#split]] then
+				split[#split] = qchat.shortcut[split[#split]]
+				pan:SetText(table.concat(split, " "))
 			end
 
-			timer.Simple(0, function() pan:RequestFocus() pan:SetCaretPos((tab or txt):len()) end)
+			timer.Simple(0, function() pan:RequestFocus() pan:SetCaretPos(pan:GetText():len()) end)
 		end
 
 		if key == KEY_UP then

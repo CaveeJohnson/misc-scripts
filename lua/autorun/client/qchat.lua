@@ -14,10 +14,10 @@ qchat.shortcut = {
 	[".unflip"] = [[┬─┬﻿ ノ( ゜-゜ノ)]],
 }
 
-local Legacy			= CreateClientConVar("qchat_legacymode", "0", true)
+local Legacy			= CreateClientConVar("qchat_legacymode", "1", true)
 local HaxrCorp		= CreateClientConVar("qchat_use_haxrcorp", "0", true)
 local FontSize		= CreateClientConVar("qchat_fontsize", HaxrCorp:GetBool() and "21" or "17", true)
-local TransBack		= CreateClientConVar("qchat_use_transback", "1", true)
+local TransBack		= CreateClientConVar("qchat_use_transback", "0", true)
 
 function qchat.CreateFonts()
 	if Legacy then

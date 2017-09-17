@@ -43,13 +43,11 @@ end)
 
 local join_sound = "npc/roller/mine/rmine_blip1.wav"
 hook.Add("PlayerInitialSpawn", "EPOE.Information.PlayerInitialSpawn", function(ply)
-	local before = ply:GetPData("EPOE.Information.JoinedBefore", false) and "" or " for the first time"
+	local before = tobool(ply:GetPData("EPOE.Information.JoinedBefore", false) or "false") and "" or " for the first time"
 
 	local address = ply:IPAddress()
 	if address == "Error!" then address = "none" end
 	local networkid = ply:SteamID()
-
-	if PlyInfo then PlyInfo:GetInfo(ply) end
 
 	local count = #player.GetAll()
 	message(joinColor, "[Join] ", normalColor, ply:Name() .. " (" .. networkid .. ") connected to the server" .. before .. ". (" .. count .. "/" .. slots .. ")")
@@ -58,7 +56,11 @@ hook.Add("PlayerInitialSpawn", "EPOE.Information.PlayerInitialSpawn", function(p
 	ply:SetPData("EPOE.Information.JoinedBefore", true)
 	quit[address] = nil
 
-	if PlyInfo then timer.Simple(2, function() if ply and IsValid(ply) then hook.Run("PostPlayerInfoSpawn", ply) end end) end
+	if PlyInfo then
+		PlyInfo:GetInfo(ply)
+
+		timer.Simple(2, function() if ply and IsValid(ply) then hook.Run("PostPlayerInfoSpawn", ply) end end)
+	end
 
 	sound(join_sound)
 end)
